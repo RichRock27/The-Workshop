@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Workshop | Provisioning Console</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+    <style>
+        :root {
+            --bg: #0a0b10;
+            --card: #15171f;
+            --accent: #4f46e5;
+            --text: #ffffff;
+            --terminal: #1c1f2b;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+
+        .console {
+            background: var(--terminal);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #2e344d;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            border-left: 2px solid transparent;
+            padding-left: 10px;
+        }
+
+        .log-entry.info {
+            border-color: var(--accent);
+            color: #94a3b8;
+        }
+
+        .log-entry.success {
+            border-color: #10b981;
+            color: #10b981;
+        }
+
+        .log-entry.error {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .log-entry.step {
+            border-color: #f59e0b;
+            color: #f59e0b;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #2e344d;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+
+        button:disabled {
+            background: #2e344d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #2e344d;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="status-badge" id="global-status">IDLE</div>
+        <h1>System Provisioning Console</h1>
+        <p class="subtitle">Real-time link repair and directory verification. Stand by for status.</p>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress"></div>
+        </div>
+
+        <div class="console" id="log-container">
+            <div class="log-entry info">System Ready. Click "Start Provisioning" to begin verification.</div>
+        </div>
+
+        <button id="start-btn" onclick="startProvisioning()">Start Provisioning</button>
+    </div>
+
+    <script>
+        const logContainer = document.getElementById('log-container');
+        const progressBar = document.getElementById('progress');
+        const startBtn = document.getElementById('start-btn');
+        const statusBadge = document.getElementById('global-status');
+
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function startProvisioning() {
+            startBtn.disabled = true;
+            statusBadge.innerText = "RUNNING";
+            statusBadge.style.background = "#4f46e5";
+            log("Initializing Hub scan...", "step");
+
+            google.script.run
+                .withSuccessHandler(projects => {
+                    log(`Found ${projects.length} project folders. Starting deep-link repair...`, "info");
+                    processQueue(projects, 0);
+                })
+                .withFailureHandler(err => {
+                    log(`CRITICAL: Hub scan failed: ${err}`, "error");
+                    finish();
+                })
+                .getProjectList();
+        }
+
+        function processQueue(projects, index) {
+            if (index >= projects.length) {
+                log("--- ALL PROJECTS VERIFIED ---", "success");
+                log("IMPORTANT: If you see 'Unable to open' in Drive, wait 60 seconds. This is a mandatory Google Shared Drive security verification period.", "step");
+                finish();
+                return;
+            }
+
+            const name = projects[index];
+            const progress = ((index + 1) / projects.length) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            log(`Provisioning: ${name}...`, "step");
+
+            google.script.run
+                .withSuccessHandler(result => {
+                    if (result.status === 'OK') {
+                        log(`${name}: ${result.msg}`, "success");
+                    } else {
+                        log(`${name}: ${result.msg}`, "error");
+                    }
+                    processQueue(projects, index + 1);
+                })
+                .withFailureHandler(err => {
+                    log(`${name} FAILED: ${err}`, "error");
+                    processQueue(projects, index + 1);
+                })
+                .provisionProject(name);
+        }
+
+        function finish() {
+            startBtn.innerText = "Provisioning Complete";
+            statusBadge.innerText = "COMPLETE";
+            statusBadge.style.background = "#10b981";
+        }
+    </script>
+</body>
+
+</html>
