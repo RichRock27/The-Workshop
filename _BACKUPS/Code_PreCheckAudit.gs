@@ -145,8 +145,7 @@ function getData() {
     { title: 'Owner Directory', priority: 7, webApp: 'https://script.google.com/macros/s/AKfycbzz21wNZSypz7tfgCzLUukBy0HG-FaWn2iRhJjs9pnvqcvVa8DbsA2fxYPMIMZ8CPsAIQ/exec' },
     { title: 'Property Directory', priority: 8, webApp: 'https://script.google.com/macros/s/AKfycbyts0lLRQcJxRVsGHttWkFmVIdzSIqqy7B8moIRatG8zmZBqt4j2i59CcSPBnR6_u1_9A/exec' },
     { title: 'Property Management Portal', priority: 9, webApp: 'https://script.google.com/macros/s/AKfycbx3BIbTcF10YByCWf5l_H3E9qMoiEO0JEL58o3pR4w9KbrnWTE-eSnBBEyddRGwW3Nl/exec', scriptId: '1rnQEXxDoEfmkBtZ3_08t36UsIF8BlCB5uBhXXIwdpPA3UEenLkNZH7_v' },
-    { title: 'Demand Generator', priority: 11, webApp: 'https://script.google.com/macros/s/AKfycbzkGMUnVv2vl2-KTCAF15KWG6-Ds9Suld_atKrHKY-LV9wXGKY_g_OjGeG2f6GYXbCC/exec' },
-    { title: 'Check Register Audit', priority: 12, webApp: 'https://RichRock27.github.io/check-auditor', icon: '🧾' }
+    { title: 'Demand Generator', priority: 11, webApp: 'https://script.google.com/macros/s/AKfycbzkGMUnVv2vl2-KTCAF15KWG6-Ds9Suld_atKrHKY-LV9wXGKY_g_OjGeG2f6GYXbCC/exec' }
   ];
 
   return { projects: configs.map(c => ({...c, id: c.title.replace(/\s+/g, '-').toLowerCase(), desc: 'Operational tool for ' + c.title, folderUrl: driveRoot})) };
