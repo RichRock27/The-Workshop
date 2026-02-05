@@ -4,6 +4,15 @@
  */
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.cleanup === 'audit_links') {
+     const log = [];
+     const oldLog = console.log;
+     console.log = (msg) => log.push(msg);
+     checkLinks();
+     console.log = oldLog;
+     return ContentService.createTextOutput(log.join('\n'));
+  }
+
   if (e && e.parameter && e.parameter.cleanup === 'true') {
      try {
        const result = diagnoseAndCleanNTV();
@@ -149,21 +158,24 @@ function getData() {
   
   const configs = [
     { title: 'Make Ready Board', priority: 1, webApp: 'https://script.google.com/macros/s/AKfycbxEi4sb9uf5yEVAUjDcFJA4yh9NREhIR1psk-Hm6mzbHBUxweMmuT2SsrEir6-p9P_2/exec', scriptId: '1jty40HA6cpR7OSOUIGm9SFkZQIwL-QW8yze9frHAMuO89lEeG-ZmBGwg', repo: 'https://github.com/RichRock27/Make_Ready_Board', icon: '🧹' },
-    { title: 'Utility Tracker', priority: 2, webApp: 'https://script.google.com/macros/s/AKfycbwE_d_IkcoVTv7EZGJD5PttesrtBahn361sMPcDA8Q0XtbWobTVs3BqF1NCIMHowdIM/exec', scriptId: '1THz90W4EovYZoWET9wR3BCTaKGfvg9gsyWRGBnoXvjHI-q_3ReyKu4Ux', repo: 'https://github.com/RichRock27/Utility_Tracker', icon: '⚡' },
+    { title: 'Utility Tracker', priority: 2, webApp: 'https://script.google.com/macros/s/AKfycbxbpQz8-bNAqM2HUNwTGvPVI-Pj5LFHj3Z8B5IMS9vihZ8U2lD8zZv1riYf0iLkxovB/exec', scriptId: '1THz90W4EovYZoWET9wR3BCTaKGfvg9gsyWRGBnoXvjHI-q_3ReyKu4Ux', repo: 'https://github.com/RichRock27/Utility_Tracker', icon: '⚡' },
     { title: 'Key Keeper 2000', priority: 3, webApp: 'https://script.google.com/macros/s/AKfycbzeYt_Kn-aoIbU0Dtcqnr5BM0L2HsdVeRQt33aDVXgBNyw1Ep33M1swnrSo3HhectXv/exec', scriptId: '1bKOxD7RZk1niB7WEJJAwa9pslQNbjDrVIcOtwvM2vzD6Fytr9teH_tc0', repo: 'https://github.com/RichRock27/Key_Keeper', icon: '🔑' },
     { title: 'Leasing Fee Audit', priority: 4, webApp: 'https://script.google.com/macros/s/AKfycbyzLRh_NTcGJwQsY4If9raiL6j5tSY5Z4KZ_fP4JwU31i0wqp5qy8cR3-9JT7SidmZcQw/exec', scriptId: '1CyQLPxltgr5IE_QbQKez8XP29PfnGUhkek4GoQmw30gNouNilUZS8WHj', repo: 'https://github.com/RichRock27/Unbilled_Fee_Audit', icon: '📊' },
     { title: 'Utility Bill Back Tool', priority: 5, webApp: 'https://script.google.com/macros/s/AKfycbwuS1MhQD1NyDrLouPjBNf6rQAhISI4tGF3aml3QWgBO_TqYypTTpOcNBF4zC-uq7Lu/exec', scriptId: '1Z5b-zBQYVB1im5x6a6EUqmkgn5q6Jo2makZ9gxQfz0vIsVEx1LjfK2bB', repo: 'https://github.com/RichRock27/Utility_Bill_Audit', icon: '💸' },
     { title: 'Ice Breakers', priority: 6, webApp: 'https://script.google.com/macros/s/AKfycbxIM8Oie8S0TXajR--FMpPNLLlSZdOXZOiahdcmJTxKo6eFaJVAt46nsrNifOeTEMKF/exec', scriptId: '1Yrp_TI9ldAILKZG7id9GM7SM63nuI_KsCeXjvpEuHqe6QD2fv4HF6tsb', repo: 'https://github.com/RichRock27/Ice-Breakers', icon: '❄️' },
     { title: 'Owner Directory', priority: 7, webApp: 'https://script.google.com/macros/s/AKfycbwD1tT3vfmPgMkA_Xni6iykjQMo_7w1pp-w-HlRk10eRfKLxLlZ7kUQMnxIJVl9CGu2zg/exec', scriptId: '1o5oTxWc6EeYw8QNzAJT9In3MYLpdbqfPPmc9amxnLZsSQ2BilmCTla7-', repo: 'https://github.com/RichRock27/Owner_Directory', icon: '📒' },
     { title: 'Property Directory', priority: 8, webApp: 'https://script.google.com/macros/s/AKfycbySbt4QYp503Z0g9faCL1InM1VPma8yz4k7FAPN1s1LIaFbk3uTs7A3MLx_cBHwMMeN6A/exec', scriptId: '1aeyESH70zD4a6_AGES5OdSnF4JDj-kMqEAn1sTm0pQit4wMz30gNCbG6', repo: 'https://github.com/RichRock27/Property_Directory', icon: '🏢' },
-    { title: 'Property Management Portal', priority: 9, webApp: 'https://script.google.com/macros/s/AKfycbzEyLtO2ZmJ9-5bO-RM6n4mW_JnQXf0PU4A2rg4OdJu08ngfSY4v5HqL2pZ7zU2Vwog1g/exec', scriptId: '1rnQEXxDoEfmkBtZ3_08t36UsIF8BlCB5uBhXXIwdpPA3UEenLkNZH7_v', repo: 'https://github.com/RichRock27/Property_Dashboard', icon: '🌐' },
-    { title: 'Vacancy Scope', priority: 10, webApp: 'https://script.google.com/macros/s/AKfycby8EXzDACY3PhHMzAqtybnFJhFW10UCTzMNHNhMtAema2W8TcO10HqtNWhZdw-zAHUqpw/exec', scriptId: '17uUoVfS4z-vWf_6V_I98-H_6b_3B_wH6', repo: 'https://github.com/RichRock27/Vacancy_Dashboard', icon: '🏠' },
-    { title: 'Demand Generator', priority: 11, webApp: 'https://script.google.com/macros/s/AKfycbwQootHBXSvH0aGsYQO4RVAHieuB5fB5tjCFgs75GJfEYpONgLR6eQ4Bijfet-YcIY4/exec', scriptId: '1BNhn9j-06yzQwfsv7PXweWdsxj34FlSnYpNSeA54EtG_FRPmErlrd1ZE', repo: 'https://github.com/RichRock27/Demand_Generator', icon: '📨' },
-    { title: 'Team Portal', priority: 12, webApp: 'https://script.google.com/macros/s/AKfycbxJtblVAvf97Ci8-Wj8WKojXSLTgG2use3t42uEJ1I3-aEqjJ2JXxrRZnm9LKjcui0S/exec', scriptId: '1tNEzd8xCfBP2KFnlwvgKTp-WBKqnBIiGKYNdZDiLoSDj4NFQTM6FUuPh', repo: 'https://github.com/RichRock27/Team_Portal_GAS', icon: '🎯' },
+    { title: 'Property Management Portal', priority: 9, webApp: 'https://script.google.com/macros/s/AKfycbxva7WnpNDMDOguBq_u85NQxtu1IFlZy-4RfVIMBQ_nhW0iU40OPqiYn3y4SeW64OoLBA/exec', scriptId: '1rnQEXxDoEfmkBtZ3_08t36UsIF8BlCB5uBhXXIwdpPA3UEenLkNZH7_v', repo: 'https://github.com/RichRock27/Property_Dashboard', icon: '🌐' },
+    { title: 'Vacancy Scope', priority: 10, webApp: 'https://script.google.com/macros/s/AKfycbz5Ji1-tfRbNsy_GQmp0CXdkuKQXBmbLxEvMDZD8QVtnyCyKUcXIV3t42yPFUpb57OcxA/exec', scriptId: '1ABPzIMhMJ72blESEjrhPGVtvq53PI1JzolL1rpyEwIeq5SBvfus_WhdZ', repo: 'https://github.com/RichRock27/Vacancy_Dashboard', icon: '🏠' },
+    { title: 'Demand Generator', priority: 11, webApp: 'https://script.google.com/macros/s/AKfycbwVjS2wMi6N1KkC4onYy3Hi4OrES0vwC1yCqShN1nx4gfPPClhR1g4w6OEjmTH-BHA6/exec', scriptId: '1BNhn9j-06yzQwfsv7PXweWdsxj34FlSnYpNSeA54EtG_FRPmErlrd1ZE', repo: 'https://github.com/RichRock27/Demand_Generator', icon: '📨' },
+    { title: 'Team Portal', priority: 12, webApp: 'https://script.google.com/macros/s/AKfycbwr9GqTt2ZZKu9ooZtTqNttpTZGVfdXOLtF9ulBcSxc4NKAv00SafHYNXUWTYGjYrBw/exec', scriptId: '1tNEzd8xCfBP2KFnlwvgKTp-WBKqnBIiGKYNdZDiLoSDj4NFQTM6FUuPh', repo: 'https://github.com/RichRock27/Team_Portal_GAS', icon: '🎯' },
     { title: 'Check Register Audit', priority: 13, webApp: 'https://RichRock27.github.io/check-auditor', scriptId: null, repo: 'https://github.com/RichRock27/check-auditor', icon: '<img src="https://RichRock27.github.io/check-auditor/favicon.png" style="width:1.2em; height:1.2em; vertical-align:middle;" />' }
   ];
 
-  return { projects: configs.map(c => ({...c, id: c.title.replace(/\s+/g, '-').toLowerCase(), desc: 'Operational tool for ' + c.title, folderUrl: driveRoot})) };
+  return { 
+    debug: 'System Online',
+    projects: configs.map(c => ({...c, id: c.title.replace(/\s+/g, '-').toLowerCase(), desc: 'Operational tool for ' + c.title, folderUrl: driveRoot})) 
+  };
 }
 
 function handleFileUpload(name, base64Data) {

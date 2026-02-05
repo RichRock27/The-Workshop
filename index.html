@@ -68,7 +68,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             width: 100%;
         }
@@ -190,8 +190,10 @@
             style="background: rgba(0,0,0,0.5); color: #4ade80; padding: 5px; font-size: 11px; text-align: center; border-bottom: 1px solid #334155;">
             Initializing Diagnostics...</div>
         <header>
-            <h1>The Workshop</h1>
-            <div class="subtitle">PropAlliance Operations Command</div>
+            <h1>The Workshop <span
+                    style="font-size: 0.4em; background: #3b82f6; color: white; -webkit-text-fill-color: white; padding: 4px 8px; border-radius: 8px; vertical-align: middle;">v2.0</span>
+            </h1>
+            <div class="subtitle" style="color: #4ade80; font-weight: 600;">Updated: February 3, 2026</div>
             <? if (isAdmin) { ?>
             <div style="margin-top:1rem;">
                 <button id="btn-rebuild" onclick="runMasterRebuild()" class="btn btn-pri"
