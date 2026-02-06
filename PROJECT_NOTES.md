@@ -262,3 +262,174 @@ This app requires extensive permissions:
 - **Script** - Execute external scripts
 
 **First-time setup:** User must authorize ALL permissions when deploying.
+
+## Auto Deep Summary (2026-02-06)
+
+**Project Type:**
+- Google Apps Script: True
+- Node/JS: False
+- Python: True
+- Web Frontend: True
+
+**High-Level Summary:**
+# The Workshop | PropAlliance Master Controller **The Workshop** is the central "Brain" of the PropAlliance automation ecosystem. It serves 3 main functions: 1.  **Hub & Spoke Integration**: Connects various isolated tools (NTV forms, Make Ready Board) into a central data stream.
+
+**Top-Level Files/Folders:**
+- .clasp.json, .claspignore, Audit.gs, Audit.js, Code.gs, Code.js, DEPLOY.sh, DEPLOYMENT.md, DEPLOY_FIXED.sh, FinalCheck.gs, FinalCheck.js, GLOBAL_DATA_ANALYSIS.md, LIVE_LINKS.md, LinkAudit.gs, LinkAudit.js, MasterHub.gs, MasterHub.js, Organizer.gs, Organizer.js, PERMANENT_BOOKMARK.md, PROJECT_NOTES.md, README.md, Recover.gs, Recover.js, Setup.gs, Setup.js, appsscript.json, easter_egg.html, index.html, inspector.js ...
+
+**Key Files:**
+- README.md, PROJECT_NOTES.md, Code.gs, index.html, appsscript.json
+
+**Detected Data Sources (from README/notes):**
+- AppFolio, CSV, Google Drive, Google Sheets
+
+**GAS Signals (if applicable):**
+- DriveApp, HtmlService, SpreadsheetApp
+
+**Notes:**
+- This section is auto-generated. Add or correct specifics as needed.
+
+## Ultra Deep Signals (2026-02-06)
+
+**GAS Functions (sample):**
+- auditDrive, checkHub, checkLinks, checkSpreadsheet, cleanUpAllScripts, createLauncherSheet, createMasterNTVLog, diagnoseAndCleanNTV, doGet, fetchCanonicalProperties, fetchHistorical2025, fetchMRBStatus, fetchUtilityHistory, findCanonicalMatch, getData, getProjectList, getTerritory, handleFileUpload, include, manualKeyKeeperRecovery, normalizePropKey, provisionAllProjects, provisionProject, rebuildMasterIndex, saveMasterIndex, whoAmI
+
+**Python Functions (sample):**
+- backup_project, log, main, run_cmd
+
+**Detected Constants (sample):**
+- ARCHIVE_FOLDER_NAME, HUB_ID, MIH_CONFIG, TARGET_NAME
+
+**Detected URLs (sample):**
+- https://RichRock27.github.io/check-auditor',
+https://RichRock27.github.io/check-auditor/favicon.png
+https://docs.google.com/spreadsheets/d/1rrtlnXiMfn8IeesyKqm4U-iTd6ykHYxhn6-oZU8IhN4
+https://drive.google.com/drive/u/0/folders/'
+https://github.com/RichRock27/Demand_Generator',
+https://github.com/RichRock27/Ice-Breakers',
+https://github.com/RichRock27/Key_Keeper',
+https://github.com/RichRock27/Make_Ready_Board',
+https://github.com/RichRock27/Owner_Directory',
+https://github.com/RichRock27/Property_Dashboard',
+(+41 more)
+
+**Notes:**
+- This section is auto-generated; treat as a signal map, not a full spec.
+
+## Ultra Deep Functions (2026-02-06)
+
+**GAS Functions (with comments if found):**
+- auditDrive
+- auditDrive
+- checkHub
+- checkHub
+- checkLinks
+- checkSpreadsheet
+- checkSpreadsheet
+- cleanUpAllScripts: Look specifically for FORMS
+  const files = DriveApp.getFilesByName(TARGET_NAME);
+  const found = [];
+  
+  while (files.hasNext()) {
+    con
+- cleanUpAllScripts: Look specifically for FORMS
+  const files = DriveApp.getFilesByName(TARGET_NAME);
+  const found = [];
+  
+  while (files.hasNext()) {
+    con
+- createLauncherSheet
+- createLauncherSheet
+- createLauncherSheet
+- createMasterNTVLog
+- createMasterNTVLog
+- diagnoseAndCleanNTV: TARGETED CLEANUP: NTV - Aur ---------------------------------------------------- Specifically finds files named "NTV - Aur" (or similar). Lo
+- diagnoseAndCleanNTV: TARGETED CLEANUP: NTV - Aur ---------------------------------------------------- Specifically finds files named "NTV - Aur" (or similar). Lo
+- doGet: THE WORKSHOP | MASTER CONTROLLER v10.0 100% SHARED DRIVE COMPATIBLE
+- doGet: THE WORKSHOP | MASTER CONTROLLER v10.0 100% SHARED DRIVE COMPATIBLE
+- doGet: THE WORKSHOP | MASTER CONTROLLER v10.0 100% SHARED DRIVE COMPATIBLE
+- fetchCanonicalProperties: 1. Fetch Canonical Properties (from PMD Data)
+    const properties = fetchCanonicalProperties(log);
+    log.push(`Found ${Object.keys(proper
+- fetchHistorical2025: The Hub
+  const folder = DriveApp.getFolderById(folderId);
+  const fileName = "MASTER_INTELLIGENCE_INDEX.json";
+  
+  const existing = folder
+- fetchMRBStatus: Skip non-utility tabs
+       
+       const data = sh.getDataRange().getValues();
+       if(data.length < 2) return;
+       
+       const h =
+- fetchUtilityHistory: Strategy: Find the 'PortfolioCount.csv' used by PMD to get the cleanest list.
+  const files = DriveApp.getFilesByName("PortfolioCount.csv");
+- findCanonicalMatch: Aggressive normalization for linking
+  return str.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+- getData: script.google.com/macros/s/AKfycbyTCbMk-mf4nk-Bh3ySpibJK9uAPwU874T2imLfD4npEGM8m8QjdqhnIkdK4V7sIYNk/exec").build());
+  const file = DriveApp
+- getData: script.google.com/macros/s/AKfycbyTCbMk-mf4nk-Bh3ySpibJK9uAPwU874T2imLfD4npEGM8m8QjdqhnIkdK4V7sIYNk/exec").build());
+  const file = DriveApp
+- getData: script.google.com/macros/s/AKfycbyTCbMk-mf4nk-Bh3ySpibJK9uAPwU874T2imLfD4npEGM8m8QjdqhnIkdK4V7sIYNk/exec").build());
+  const file = DriveApp
+- getProjectList
+- getProjectList
+- getProjectList
+- (+17 more)
+
+**Python Functions (with docstrings if found):**
+- backup_project
+- log
+- main
+- run_cmd
+
+**HTML Includes (if any):**
+- None detected
+
+**Potential Risks/Flags (auto):**
+- DriveApp usage without visible try/catch in snippet
+
+
+## File Summary
+- See `FILE_SUMMARY.md` for per-file notes.
+
+
+## Runtime Flow
+- See `RUNTIME_FLOW.md` for flow and inputs.
+
+
+## Risks
+- See `RISKS.md` for risk flags.
+
+
+## Data Contract
+- See `DATA_CONTRACT.md` for CSV schema headers.
+
+
+## Function Map
+- See `FUNCTION_MAP.md` for per-file functions.
+
+
+## Failure Playbook
+- See `FAILURE_PLAYBOOK.md` for common breakages.
+
+
+## Security Review
+- See `SECURITY_REVIEW.md` for risk flags.
+
+
+## Operational Timeline
+- See `OPERATIONAL_TIMELINE.md` for trigger and refresh hints.
+
+
+## Test Checklist
+- See `TEST_CHECKLIST.md` for smoke test steps.
+
+
+## Business Logic Map
+- See `BUSINESS_LOGIC_MAP.md` for metric-to-data mapping.
+
+
+## Runbook
+- See `RUNBOOK.md` for ops/recovery steps.

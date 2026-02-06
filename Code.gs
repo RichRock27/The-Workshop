@@ -169,7 +169,8 @@ function getData() {
     { title: 'Vacancy Scope', priority: 10, webApp: 'https://script.google.com/macros/s/AKfycbz5Ji1-tfRbNsy_GQmp0CXdkuKQXBmbLxEvMDZD8QVtnyCyKUcXIV3t42yPFUpb57OcxA/exec', scriptId: '1ABPzIMhMJ72blESEjrhPGVtvq53PI1JzolL1rpyEwIeq5SBvfus_WhdZ', repo: 'https://github.com/RichRock27/Vacancy_Dashboard', icon: '🏠' },
     { title: 'Demand Generator', priority: 11, webApp: 'https://script.google.com/macros/s/AKfycbwVjS2wMi6N1KkC4onYy3Hi4OrES0vwC1yCqShN1nx4gfPPClhR1g4w6OEjmTH-BHA6/exec', scriptId: '1BNhn9j-06yzQwfsv7PXweWdsxj34FlSnYpNSeA54EtG_FRPmErlrd1ZE', repo: 'https://github.com/RichRock27/Demand_Generator', icon: '📨' },
     { title: 'Team Portal', priority: 12, webApp: 'https://script.google.com/macros/s/AKfycbwr9GqTt2ZZKu9ooZtTqNttpTZGVfdXOLtF9ulBcSxc4NKAv00SafHYNXUWTYGjYrBw/exec', scriptId: '1tNEzd8xCfBP2KFnlwvgKTp-WBKqnBIiGKYNdZDiLoSDj4NFQTM6FUuPh', repo: 'https://github.com/RichRock27/Team_Portal_GAS', icon: '🎯' },
-    { title: 'Check Register Audit', priority: 13, webApp: 'https://RichRock27.github.io/check-auditor', scriptId: null, repo: 'https://github.com/RichRock27/check-auditor', icon: '<img src="https://RichRock27.github.io/check-auditor/favicon.png" style="width:1.2em; height:1.2em; vertical-align:middle;" />' }
+    { title: 'Check Register Audit', priority: 13, webApp: 'https://RichRock27.github.io/check-auditor', scriptId: null, repo: 'https://github.com/RichRock27/check-auditor', icon: '<img src="https://RichRock27.github.io/check-auditor/favicon.png" style="width:1.2em; height:1.2em; vertical-align:middle;" />' },
+    { title: 'Owner Specific Dashboard', priority: 14, webApp: null, scriptId: null, repo: null, icon: '👤' }
   ];
 
   return { 

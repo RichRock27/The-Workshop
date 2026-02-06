@@ -5,7 +5,7 @@ import shutil
 import time
 
 # ==========================================
-# PROJECT SENTRY - Automated Backup System v2
+# PROJECT SENTRY - Automated Backup System v3
 # ==========================================
 # This script performs:
 # 1. clasp pull (Sync from Google Apps Script)
@@ -51,6 +51,7 @@ def backup_project(project_path):
     # 1. Clasp Pull (Sync from Google)
     if os.path.exists(os.path.join(project_path, ".clasp.json")):
         log(f"  > GAS project detected. Running clasp pull...")
+        # Note: requires being logged in via 'clasp login'
         success, out, err = run_cmd("clasp pull", project_path)
         if success:
             log(f"    ✅ Pulled from Google")
@@ -71,11 +72,15 @@ def backup_project(project_path):
             success, out, _ = run_cmd("git remote", project_path)
             if out.strip():
                 log(f"    > Pushing to remote...")
-                push_success, _, p_err = run_cmd("git push", project_path)
+                # Get current branch
+                _, branch, _ = run_cmd("git rev-parse --abbrev-ref HEAD", project_path)
+                branch = branch.strip() or "main"
+                
+                push_success, _, p_err = run_cmd(f"git push origin {branch}", project_path)
                 if push_success:
-                    log(f"    ✅ Pushed to remote repository")
+                    log(f"    ✅ Pushed to remote ({branch})")
                 else:
-                    log(f"    ⚠️  Push failed (check credentials): {p_err.strip()}")
+                    log(f"    ⚠️  Push failed (try manual setup): {p_err.strip()}")
             else:
                 log(f"    ℹ️  No remote found, local commit only.")
         else:
@@ -89,13 +94,13 @@ def backup_project(project_path):
     
     archive_path = os.path.join(archive_dir, f"{project_name}.zip")
     
-    # Exclude bloat
-    # Logic: zip -r [archive] . -x "pattern" "pattern"
-    zip_cmd = f'zip -r "{archive_path}" . -x "*/node_modules/*" "*/dist/*" "*/.cache/*" "*/venv/*" "*/__pycache__/*"'
+    # Exclude bloat directories to save space
+    # Native zip patterns for common bloat
+    zip_cmd = f'zip -r -q "{archive_path}" . -x "node_modules/*" "dist/*" ".cache/*" "venv/*" "__pycache__/*" "*/node_modules/*" "*/dist/*"'
     
     success, out, err = run_cmd(zip_cmd, project_path)
     if success:
-        log(f"  ✅ ZIP Archive created (cleaned).")
+        log(f"  ✅ ZIP Archive created.")
     else:
         log(f"  ❌ ZIP Archive failed: {err.strip()}")
 
