@@ -1,0 +1,148 @@
+import os
+import subprocess
+import datetime
+import shutil
+import time
+
+# ==========================================
+# PROJECT SENTRY - Automated Backup System
+# ==========================================
+# This script performs:
+# 1. clasp pull (Sync from Google Apps Script)
+# 2. git commit/push (Sync to GitHub/Gitea)
+# 3. zip archiving (Local offline copy)
+# 4. cleanup (Retention of 14 days)
+# ==========================================
+
+BASE_DIR = "/Users/richgreen/.gemini/antigravity/scratch/_ACTIVE_PROJECTS"
+BACKUP_ROOT = "/Users/richgreen/.gemini/antigravity/scratch/_PROJECT_BACKUPS"
+LOG_DIR = os.path.join(BACKUP_ROOT, "logs")
+RETENTION_DAYS = 14
+
+# Ensure core directories exist
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, f"backup_{datetime.date.today()}.log")
+
+def log(message):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    formatted_msg = f"[{timestamp}] {message}"
+    print(formatted_msg)
+    with open(LOG_FILE, "a") as f:
+        f.write(formatted_msg + "\n")
+
+def run_cmd(cmd, cwd):
+    try:
+        # Use full path for clasp and git if needed, but let's assume they are in PATH
+        # Adding common paths just in case for launchd environment
+        env = os.environ.copy()
+        env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + env.get("PATH", "")
+        
+        result = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True, text=True, env=env)
+        return result.returncode == 0, result.stdout, result.stderr
+    except Exception as e:
+        return False, "", str(e)
+
+def backup_project(project_path):
+    project_name = os.path.basename(project_path)
+    # Skip hidden folders and specific patterns
+    if project_name.startswith(".") or "backup" in project_name.lower() or project_name == "_BACKUPS":
+        return
+
+    log(f"--- 💠 Processing: {project_name} ---")
+    
+    # 1. Clasp Pull (Sync from Google)
+    if os.path.exists(os.path.join(project_path, ".clasp.json")):
+        log(f"  > GAS project detected. Running clasp pull...")
+        success, out, err = run_cmd("clasp pull", project_path)
+        if success:
+            log(f"    ✅ Pulled from Google")
+        else:
+            log(f"    ❌ Clasp pull failed: {err.strip()}")
+
+    # 2. Git Backup
+    if os.path.exists(os.path.join(project_path, ".git")):
+        log(f"  > Git repository detected.")
+        # Check status
+        _, out, _ = run_cmd("git status --short", project_path)
+        if out.strip():
+            log(f"    > Found changes. Committing...")
+            run_cmd('git add .', project_path)
+            run_cmd(f'git commit -m "Automated nightly backup - {datetime.date.today()}"', project_path)
+            
+            # Check for remote
+            success, out, _ = run_cmd("git remote", project_path)
+            if out.strip():
+                log(f"    > Pushing to remote...")
+                # We try to push to main or master
+                push_success, _, p_err = run_cmd("git push", project_path)
+                if push_success:
+                    log(f"    ✅ Pushed to remote repository")
+                else:
+                    log(f"    ⚠️  Push failed (check credentials): {p_err.strip()}")
+            else:
+                log(f"    ℹ️  No remote found, local commit only.")
+        else:
+            log(f"    ✅ Local files up to date.")
+
+    # 3. Local Archive (ZIP)
+    # Store in a date-stamped folder
+    date_str = datetime.date.today().strftime("%Y-%m-%d")
+    archive_dir = os.path.join(BACKUP_ROOT, date_str)
+    os.makedirs(archive_dir, exist_ok=True)
+    
+    archive_base = os.path.join(archive_dir, project_name)
+    try:
+        # Avoid recursive zipping if the backup folder is somehow inside (it's not here)
+        shutil.make_archive(archive_base, 'zip', project_path)
+        log(f"  ✅ ZIP Archive created.")
+    except Exception as e:
+        log(f"  ❌ ZIP Archive failed: {str(e)}")
+
+def main():
+    start_time = time.time()
+    log("==========================================")
+    log("🛰  PROJECT SENTRY: NIGHTLY BACKUP START")
+    log("==========================================")
+    
+    if not os.path.exists(BASE_DIR):
+        log(f"FATAL: Base directory {BASE_DIR} not found.")
+        return
+
+    # List all subdirectories
+    try:
+        items = os.listdir(BASE_DIR)
+        subdirs = [os.path.join(BASE_DIR, d) for d in items if os.path.isdir(os.path.join(BASE_DIR, d))]
+        subdirs.sort()
+    except Exception as e:
+        log(f"FATAL: Could not list directory: {str(e)}")
+        return
+    
+    for project in subdirs:
+        backup_project(project)
+        
+    # 4. Retention Management
+    log("--- 🧹 Cleaning up old backups ---")
+    try:
+        backups = [os.path.join(BACKUP_ROOT, d) for d in os.listdir(BACKUP_ROOT) 
+                   if os.path.isdir(os.path.join(BACKUP_ROOT, d)) and d != "logs"]
+        
+        for b in backups:
+            folder_name = os.path.basename(b)
+            try:
+                folder_date = datetime.datetime.strptime(folder_name, "%Y-%m-%d").date()
+                age = (datetime.date.today() - folder_date).days
+                if age > RETENTION_DAYS:
+                    log(f"  > Removing expired backup ({age} days old): {folder_name}")
+                    shutil.rmtree(b)
+            except ValueError:
+                continue # Skip folders that don't match the date format
+    except Exception as e:
+        log(f"  ❌ Cleanup error: {str(e)}")
+            
+    duration = time.time() - start_time
+    log("==========================================")
+    log(f"🏁 BACKUP COMPLETE. Duration: {duration:.2f}s")
+    log("==========================================")
+
+if __name__ == "__main__":
+    main()
