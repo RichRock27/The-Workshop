@@ -5,12 +5,12 @@ import shutil
 import time
 
 # ==========================================
-# PROJECT SENTRY - Automated Backup System
+# PROJECT SENTRY - Automated Backup System v2
 # ==========================================
 # This script performs:
 # 1. clasp pull (Sync from Google Apps Script)
 # 2. git commit/push (Sync to GitHub/Gitea)
-# 3. zip archiving (Local offline copy)
+# 3. zip archiving (Local offline copy with exclusions)
 # 4. cleanup (Retention of 14 days)
 # ==========================================
 
@@ -32,8 +32,6 @@ def log(message):
 
 def run_cmd(cmd, cwd):
     try:
-        # Use full path for clasp and git if needed, but let's assume they are in PATH
-        # Adding common paths just in case for launchd environment
         env = os.environ.copy()
         env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + env.get("PATH", "")
         
@@ -73,7 +71,6 @@ def backup_project(project_path):
             success, out, _ = run_cmd("git remote", project_path)
             if out.strip():
                 log(f"    > Pushing to remote...")
-                # We try to push to main or master
                 push_success, _, p_err = run_cmd("git push", project_path)
                 if push_success:
                     log(f"    ✅ Pushed to remote repository")
@@ -85,18 +82,22 @@ def backup_project(project_path):
             log(f"    ✅ Local files up to date.")
 
     # 3. Local Archive (ZIP)
-    # Store in a date-stamped folder
+    # Use native zip with exclusions for performance
     date_str = datetime.date.today().strftime("%Y-%m-%d")
     archive_dir = os.path.join(BACKUP_ROOT, date_str)
     os.makedirs(archive_dir, exist_ok=True)
     
-    archive_base = os.path.join(archive_dir, project_name)
-    try:
-        # Avoid recursive zipping if the backup folder is somehow inside (it's not here)
-        shutil.make_archive(archive_base, 'zip', project_path)
-        log(f"  ✅ ZIP Archive created.")
-    except Exception as e:
-        log(f"  ❌ ZIP Archive failed: {str(e)}")
+    archive_path = os.path.join(archive_dir, f"{project_name}.zip")
+    
+    # Exclude bloat
+    # Logic: zip -r [archive] . -x "pattern" "pattern"
+    zip_cmd = f'zip -r "{archive_path}" . -x "*/node_modules/*" "*/dist/*" "*/.cache/*" "*/venv/*" "*/__pycache__/*"'
+    
+    success, out, err = run_cmd(zip_cmd, project_path)
+    if success:
+        log(f"  ✅ ZIP Archive created (cleaned).")
+    else:
+        log(f"  ❌ ZIP Archive failed: {err.strip()}")
 
 def main():
     start_time = time.time()
@@ -108,14 +109,9 @@ def main():
         log(f"FATAL: Base directory {BASE_DIR} not found.")
         return
 
-    # List all subdirectories
-    try:
-        items = os.listdir(BASE_DIR)
-        subdirs = [os.path.join(BASE_DIR, d) for d in items if os.path.isdir(os.path.join(BASE_DIR, d))]
-        subdirs.sort()
-    except Exception as e:
-        log(f"FATAL: Could not list directory: {str(e)}")
-        return
+    items = os.listdir(BASE_DIR)
+    subdirs = [os.path.join(BASE_DIR, d) for d in items if os.path.isdir(os.path.join(BASE_DIR, d))]
+    subdirs.sort()
     
     for project in subdirs:
         backup_project(project)
@@ -135,7 +131,7 @@ def main():
                     log(f"  > Removing expired backup ({age} days old): {folder_name}")
                     shutil.rmtree(b)
             except ValueError:
-                continue # Skip folders that don't match the date format
+                continue
     except Exception as e:
         log(f"  ❌ Cleanup error: {str(e)}")
             
