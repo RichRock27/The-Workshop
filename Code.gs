@@ -13,6 +13,15 @@ function doGet(e) {
      return ContentService.createTextOutput(log.join('\n'));
   }
 
+  if (e && e.parameter && e.parameter.cleanup === 'archive_launchers') {
+     try {
+       const result = archiveLauncherSheets();
+       return ContentService.createTextOutput(result);
+     } catch (err) {
+       return ContentService.createTextOutput("Error running archive: " + err.toString());
+     }
+  }
+
   if (e && e.parameter && e.parameter.cleanup === 'true') {
      try {
        const result = diagnoseAndCleanNTV();
@@ -125,14 +134,7 @@ function provisionProject(projectName) {
   let results = [];
   
   if (config && config.webApp) {
-     results.push(createLauncherSheet(folder, "🚀 LAUNCH " + config.title.toUpperCase(), config.webApp));
-  }
-  
-  const sheets = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
-  while (sheets.hasNext()) {
-     const ss = sheets.next();
-     if (ss.getName().includes("LAUNCH")) continue;
-     results.push(createLauncherSheet(folder, "📊 DATA SHEET | " + ss.getName().toUpperCase(), ss.getUrl()));
+     results.push(createLauncherSheet(folder, "LAUNCH | " + config.title.toUpperCase(), config.webApp));
   }
   return { status: 'success', results: results };
 }
@@ -152,10 +154,46 @@ function createLauncherSheet(parentFolder, title, targetUrl) {
   return "Created: " + title;
 }
 
+function archiveLauncherSheets() {
+  const HUB_ID = '1PZA9tvrtFzpPIo-fteXt8VKCGEC9j4ZK';
+  const hub = DriveApp.getFolderById(HUB_ID);
+  const archiveName = '_ARCHIVE_LAUNCHERS';
+  const existing = hub.getFoldersByName(archiveName);
+  const archive = existing.hasNext() ? existing.next() : hub.createFolder(archiveName);
+
+  const folders = hub.getFolders();
+  let moved = 0;
+  const patterns = [
+    /^DATA SHEET\s*\|/i,
+    /BACK TO WORKSHOP/i,
+    /^🚀\s*LAUNCH/i
+  ];
+
+  while (folders.hasNext()) {
+    const folder = folders.next();
+    const files = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
+    while (files.hasNext()) {
+      const f = files.next();
+      const name = f.getName();
+      if (patterns.some(rx => rx.test(name))) {
+        f.moveTo(archive);
+        moved++;
+      }
+    }
+  }
+
+  return "Archived " + moved + " launcher sheets to " + archive.getName();
+}
+
 function getData() {
   const HUB_ID = '1PZA9tvrtFzpPIo-fteXt8VKCGEC9j4ZK';
   const driveRoot = 'https://drive.google.com/drive/u/0/folders/' + HUB_ID;
   const LOCAL_ROOT = 'file:///Users/richgreen/.gemini/antigravity/scratch/_ACTIVE_PROJECTS';
+  const sheetMap = buildSheetMap_(HUB_ID);
+  const candidateMap = buildSheetCandidates_(HUB_ID);
+  const pinnedMap = getPinnedSheetMap_();
+  const globalSheets = buildGlobalSheetIndex_(HUB_ID);
+  const totalCandidates = Object.keys(candidateMap).reduce((acc, k) => acc + (candidateMap[k] ? candidateMap[k].length : 0), 0);
   
   const configs = [
     { title: 'Make Ready Board', priority: 1, webApp: 'https://script.google.com/macros/s/AKfycbxEi4sb9uf5yEVAUjDcFJA4yh9NREhIR1psk-Hm6mzbHBUxweMmuT2SsrEir6-p9P_2/exec', scriptId: '1jty40HA6cpR7OSOUIGm9SFkZQIwL-QW8yze9frHAMuO89lEeG-ZmBGwg', repo: 'https://github.com/RichRock27/Make_Ready_Board', icon: '🧹', localPath: LOCAL_ROOT + '/Make_Ready_Board', sheetUrl: null },
@@ -175,9 +213,219 @@ function getData() {
   ];
 
   return { 
-    debug: 'System Online',
-    projects: configs.map(c => ({...c, id: c.title.replace(/\s+/g, '-').toLowerCase(), desc: 'Operational tool for ' + c.title, folderUrl: driveRoot})) 
+    debug: 'System Online | Sheet candidates: ' + totalCandidates,
+    projects: configs.map(c => ({
+      ...c,
+      id: c.title.replace(/\s+/g, '-').toLowerCase(),
+      desc: 'Operational tool for ' + c.title,
+      folderUrl: driveRoot,
+      sheetUrl: (pinnedMap[c.title] && pinnedMap[c.title].url) || c.sheetUrl || sheetMap[normalizeKey_(c.title)] || null,
+      sheetName: (pinnedMap[c.title] && pinnedMap[c.title].name) || null,
+      sheetCandidates: getCandidatesForProject_(c.title, candidateMap, globalSheets)
+    })) 
   };
+}
+
+function buildSheetMap_(hubId) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('sheet_map_v1');
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) {}
+  }
+
+  const hub = DriveApp.getFolderById(hubId);
+  const folders = hub.getFolders();
+  const map = {};
+
+  while (folders.hasNext()) {
+    const folder = folders.next();
+    const name = folder.getName();
+    const key = normalizeKey_(name);
+    const sheets = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
+    let best = null;
+    let bestScore = -1;
+
+    while (sheets.hasNext()) {
+      const f = sheets.next();
+      const fname = f.getName();
+      if (/LAUNCH/i.test(fname)) continue;
+
+      let score = 0;
+      if (fname.toLowerCase().includes(name.toLowerCase())) score += 3;
+      if (/master|main|dashboard|directory|tracker|log/i.test(fname)) score += 2;
+      if (/archive|backup|old/i.test(fname)) score -= 2;
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = f;
+      }
+    }
+
+    if (best) map[key] = best.getUrl();
+  }
+
+  cache.put('sheet_map_v1', JSON.stringify(map), 60 * 30);
+  return map;
+}
+
+function buildSheetCandidates_(hubId) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('sheet_candidates_v1');
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) {}
+  }
+
+  const hub = DriveApp.getFolderById(hubId);
+  const folders = hub.getFolders();
+  const map = {};
+
+  while (folders.hasNext()) {
+    const folder = folders.next();
+    const name = folder.getName();
+    const key = normalizeKey_(name);
+    const sheets = collectSheets_(folder, 2);
+    const candidates = [];
+
+    while (sheets.hasNext()) {
+      const f = sheets.next();
+      const fname = f.getName();
+      if (/LAUNCH/i.test(fname)) continue;
+
+      let score = 0;
+      if (fname.toLowerCase().includes(name.toLowerCase())) score += 3;
+      if (/master|main|dashboard|directory|tracker|log/i.test(fname)) score += 2;
+      if (/archive|backup|old/i.test(fname)) score -= 2;
+
+      candidates.push({
+        id: f.getId(),
+        name: fname,
+        url: f.getUrl(),
+        score: score
+      });
+    }
+
+    candidates.sort((a, b) => b.score - a.score);
+    map[key] = candidates.slice(0, 3);
+  }
+
+  cache.put('sheet_candidates_v1', JSON.stringify(map), 60 * 30);
+  return map;
+}
+
+function getPinnedSheetMap_() {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty('PINNED_SHEETS');
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch (e) { return {}; }
+}
+
+function setPinnedSheet(projectTitle, sheetId) {
+  if (!projectTitle || !sheetId) return { status: 'error', message: 'Missing projectTitle or sheetId' };
+  const props = PropertiesService.getScriptProperties();
+  const map = getPinnedSheetMap_();
+  const file = DriveApp.getFileById(sheetId);
+  const url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/edit';
+  map[projectTitle] = { url: url, name: file.getName(), id: sheetId };
+  props.setProperty('PINNED_SHEETS', JSON.stringify(map));
+  return { status: 'success', project: projectTitle, sheetUrl: url, sheetName: file.getName() };
+}
+
+function clearPinnedSheet(projectTitle) {
+  if (!projectTitle) return { status: 'error', message: 'Missing projectTitle' };
+  const props = PropertiesService.getScriptProperties();
+  const map = getPinnedSheetMap_();
+  delete map[projectTitle];
+  props.setProperty('PINNED_SHEETS', JSON.stringify(map));
+  return { status: 'success', project: projectTitle };
+}
+
+function setPinnedSheetByUrl(projectTitle, sheetUrl) {
+  if (!projectTitle || !sheetUrl) return { status: 'error', message: 'Missing projectTitle or sheetUrl' };
+  const match = String(sheetUrl).match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!match) return { status: 'error', message: 'Invalid Sheet URL' };
+  return setPinnedSheet(projectTitle, match[1]);
+}
+
+function normalizeKey_(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/[^a-z0-9 ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function collectSheets_(folder, maxDepth) {
+  const sheets = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
+  if (maxDepth <= 0) return sheets;
+
+  const iterators = [sheets];
+  const subfolders = folder.getFolders();
+  while (subfolders.hasNext()) {
+    const sub = subfolders.next();
+    iterators.push(collectSheets_(sub, maxDepth - 1));
+  }
+
+  let current = 0;
+  return {
+    hasNext: () => {
+      while (current < iterators.length && !iterators[current].hasNext()) current++;
+      return current < iterators.length;
+    },
+    next: () => iterators[current].next()
+  };
+}
+
+function buildGlobalSheetIndex_(hubId) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('sheet_global_v1');
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) {}
+  }
+
+  const hub = DriveApp.getFolderById(hubId);
+  const sheets = collectSheets_(hub, 3);
+  const list = [];
+
+  while (sheets.hasNext()) {
+    const f = sheets.next();
+    const fname = f.getName();
+    if (/LAUNCH/i.test(fname)) continue;
+    list.push({ id: f.getId(), name: fname, url: f.getUrl() });
+  }
+
+  cache.put('sheet_global_v1', JSON.stringify(list), 60 * 30);
+  return list;
+}
+
+function getCandidatesForProject_(projectTitle, candidateMap, globalSheets) {
+  const key = normalizeKey_(projectTitle);
+  const direct = candidateMap[key] || [];
+  if (direct.length > 0) return direct;
+  return rankGlobalCandidates_(globalSheets, projectTitle).slice(0, 3);
+}
+
+function rankGlobalCandidates_(globalSheets, projectTitle) {
+  const key = normalizeKey_(projectTitle);
+  if (!key) return [];
+  const tokens = key.split(' ').filter(Boolean);
+  const scored = [];
+
+  globalSheets.forEach(s => {
+    const nameKey = normalizeKey_(s.name);
+    let score = 0;
+    if (nameKey.includes(key)) score += 4;
+    tokens.forEach(t => {
+      if (t.length > 2 && nameKey.includes(t)) score += 1;
+    });
+    if (/master|main|dashboard|directory|tracker|log/i.test(s.name)) score += 1;
+    if (/archive|backup|old/i.test(s.name)) score -= 2;
+    if (score > 0) scored.push({ ...s, score: score });
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored;
 }
 
 function handleFileUpload(name, base64Data) {

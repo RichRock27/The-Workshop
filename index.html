@@ -270,6 +270,9 @@
                 card.className = 'card';
 
                 const filesBtn = `<a href="${p.folderUrl || '#'}" target="_blank" class="btn btn-sec">Files</a>`;
+                const sheetBtn = p.sheetUrl
+                    ? `<a href="${p.sheetUrl}" target="_blank" class="btn btn-sec" title="Google Sheet">Sheet</a>`
+                    : `<span class="btn btn-sec btn-disabled">Sheet</span>`;
 
                 let devBtn = '';
                 if (p.scriptId) {
@@ -277,6 +280,22 @@
                     devBtn = `<a href="${devUrl}" target="_blank" class="btn btn-dev" title="Developer Mode">Dev</a>`;
                 } else {
                     devBtn = `<span class="btn btn-sec btn-disabled">Dev</span>`;
+                }
+
+                let gasBtn = '';
+                if (p.scriptId) {
+                    const gasUrl = `https://script.google.com/d/${p.scriptId}/edit`;
+                    gasBtn = `<a href="${gasUrl}" target="_blank" class="btn btn-sec" title="Apps Script">GAS</a>`;
+                } else {
+                    gasBtn = `<span class="btn btn-sec btn-disabled">GAS</span>`;
+                }
+
+                let localBtn = '';
+                if (p.localPath) {
+                    const localUrl = encodeURI(p.localPath);
+                    localBtn = `<a href="${localUrl}" target="_blank" class="btn btn-sec" title="Local Files">Local</a>`;
+                } else {
+                    localBtn = `<span class="btn btn-sec btn-disabled">Local</span>`;
                 }
 
                 let gitBtn = '';
@@ -303,12 +322,71 @@
           <div class="card-actions">
             ${launchBtn}
             ${filesBtn}
+            ${sheetBtn}
             ${devBtn}
+            ${gasBtn}
+            ${localBtn}
             ${gitBtn}
           </div>
+          ${renderSheetCandidates(p)}
         `;
                 grid.appendChild(card);
             });
+        }
+
+        function renderSheetCandidates(p) {
+            if (p.sheetUrl) {
+                return `<div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.15); padding-top:8px;">
+        <div style="color:#94a3b8; font-size:0.8rem;">Pinned Sheet</div>
+        <div style="color:#cbd5e1; font-size:0.8rem; margin-top:4px;">${p.sheetName || 'Unnamed Sheet'}</div>
+        <button class="btn btn-sec" style="padding:6px 10px; margin-top:8px;" onclick="clearPinned('${p.title.replace(/'/g, "\\'")}')">Clear</button>
+      </div>`;
+            }
+            return `<div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.15); padding-top:8px;">
+        <div style="color:#94a3b8; font-size:0.8rem;">Set Sheet (Paste URL)</div>
+        <button class="btn btn-sec" style="padding:6px 10px; margin-top:6px;" onclick="promptSetSheet('${p.title.replace(/'/g, "\\'")}')">Set Sheet</button>
+      </div>`;
+        }
+
+        function pinSheet(projectTitle, sheetId) {
+            google.script.run
+                .withSuccessHandler(res => {
+                    console.log('Pinned sheet:', res);
+                    google.script.run.withSuccessHandler(render).getData();
+                })
+                .withFailureHandler(err => {
+                    console.error('Pin sheet failed:', err);
+                    alert('Failed to pin sheet: ' + err.message);
+                })
+                .setPinnedSheet(projectTitle, sheetId);
+        }
+
+        function clearPinned(projectTitle) {
+            google.script.run
+                .withSuccessHandler(res => {
+                    console.log('Cleared pinned sheet:', res);
+                    google.script.run.withSuccessHandler(render).getData();
+                })
+                .withFailureHandler(err => {
+                    console.error('Clear pinned failed:', err);
+                    alert('Failed to clear pinned sheet: ' + err.message);
+                })
+                .clearPinnedSheet(projectTitle);
+        }
+
+        function promptSetSheet(projectTitle) {
+            const url = prompt('Paste the Google Sheet URL for ' + projectTitle + ':');
+            if (!url) return;
+            google.script.run
+                .withSuccessHandler(res => {
+                    console.log('Pinned sheet by URL:', res);
+                    google.script.run.withSuccessHandler(render).getData();
+                })
+                .withFailureHandler(err => {
+                    console.error('Set sheet failed:', err);
+                    alert('Failed to set sheet: ' + err.message);
+                })
+                .setPinnedSheetByUrl(projectTitle, url);
         }
 
         // Init
