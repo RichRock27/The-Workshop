@@ -22,6 +22,15 @@ function doGet(e) {
      }
   }
 
+  if (e && e.parameter && e.parameter.cleanup === 'clean_recents') {
+     try {
+       const result = archiveLauncherSheets();
+       return ContentService.createTextOutput(result + "\nTip: Recents will clear after those files stop being opened.");
+     } catch (err) {
+       return ContentService.createTextOutput("Error running clean: " + err.toString());
+     }
+  }
+
   if (e && e.parameter && e.parameter.cleanup === 'true') {
      try {
        const result = diagnoseAndCleanNTV();
@@ -221,6 +230,7 @@ function getData() {
       folderUrl: driveRoot,
       sheetUrl: (pinnedMap[c.title] && pinnedMap[c.title].url) || c.sheetUrl || sheetMap[normalizeKey_(c.title)] || null,
       sheetName: (pinnedMap[c.title] && pinnedMap[c.title].name) || null,
+      sheetInfo: getSheetInfoForProject_(c.title),
       sheetCandidates: getCandidatesForProject_(c.title, candidateMap, globalSheets)
     })) 
   };
@@ -328,6 +338,45 @@ function setPinnedSheet(projectTitle, sheetId) {
   map[projectTitle] = { url: url, name: file.getName(), id: sheetId };
   props.setProperty('PINNED_SHEETS', JSON.stringify(map));
   return { status: 'success', project: projectTitle, sheetUrl: url, sheetName: file.getName() };
+}
+
+function getSheetInfoForProject_(projectTitle) {
+  try {
+    const key = normalizeKey_(projectTitle);
+    const map = getAutoSheetMap_();
+    return map[key] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getAutoSheetMap_() {
+  // Canonical sheet info derived from app code (hardcoded IDs) or known binding type.
+  // Keys are normalized project titles.
+  const entries = [
+    { key: 'key keeper 2000', id: '1lcg4IgFpQGUrfeJLnhkyINphU2v-L0x2fv6lImFjMNk' },
+    { key: 'property directory', id: '1IuT5zd0m_brD35kQIy_TIiFty4Gv1ez8KDTmGwqKXkw' },
+    { key: 'utility tracker', mode: 'active' },
+    { key: 'key lookup tool', id: '1lcg4IgFpQGUrfeJLnhkyINphU2v-L0x2fv6lImFjMNk' }
+  ];
+
+  const map = {};
+  entries.forEach(entry => {
+    const key = normalizeKey_(entry.key);
+    if (entry.id) {
+      try {
+        const file = DriveApp.getFileById(entry.id);
+        map[key] = { id: entry.id, url: file.getUrl(), name: file.getName() };
+      } catch (e) {
+        // If access fails, skip rather than showing wrong info.
+      }
+      return;
+    }
+    if (entry.mode === 'active') {
+      map[key] = { name: 'Active Spreadsheet (container-bound)' };
+    }
+  });
+  return map;
 }
 
 function clearPinnedSheet(projectTitle) {
